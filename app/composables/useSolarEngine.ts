@@ -68,6 +68,15 @@ export const useSolarEngine = () => {
     //     hue = 220
     //     saturation = 30
     // }
+    // 5. Star Visibility Logic
+    // Stars invisible above -6 deg (Civil Twilight). 
+    // Fade in until -18 deg (Astronomical Twilight).
+    let starOpacity = 0
+    if (altitudeDeg < -6) {
+        // Map -6 -> 0, -18 -> 1
+        starOpacity = Math.min(1, (Math.abs(altitudeDeg) - 6) / 12)
+    }
+
     const textColor = lightness < 50 ? 'white' : 'black'
 
     // Determine Phase
@@ -76,7 +85,7 @@ export const useSolarEngine = () => {
     if (altitudeDeg > -6 && altitudeDeg <= 0) phase = 'Civil Twilight'
     if (altitudeDeg > -12 && altitudeDeg <= -6) phase = 'Nautical Twilight'
     if (altitudeDeg > -18 && altitudeDeg <= -12) phase = 'Astronomical Twilight'
-    if (altitudeDeg > -2 && altitudeDeg < 8) phase = 'Golden Hour' // Adjusted range to match logic
+    if (altitudeDeg > -2 && altitudeDeg < 8) phase = 'Golden Hour'
 
     solarData.value = {
       altitude: altitudeDeg,
@@ -94,6 +103,7 @@ export const useSolarEngine = () => {
       root.style.setProperty('--solar-s', `${saturation}%`)
       root.style.setProperty('--solar-l', `${lightness}%`)
       root.style.setProperty('--text-color', textColor)
+      root.style.setProperty('--star-opacity', `${starOpacity}`)
     }
   }
 

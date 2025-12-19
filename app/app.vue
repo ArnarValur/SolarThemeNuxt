@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { solarData, updateSolarMetrics, setTheme, currentTheme } = useSolarEngine()
+const { visibleStars, updateStars } = useStarMap()
 
 // Initialize with current time in minutes
 const getCurrentMinutes = () => {
@@ -21,6 +22,7 @@ const simulatedDate = computed(() => {
 watch(sliderMinutes, () => {
   isManual.value = true
   updateSolarMetrics(simulatedDate.value)
+  updateStars(simulatedDate.value)
 })
 
 // Watch for theme changes to trigger re-calc
@@ -31,11 +33,13 @@ watch(currentTheme, () => {
 // Update loop
 onMounted(() => {
   updateSolarMetrics(simulatedDate.value)
-
+  updateStars(simulatedDate.value)
+  
   setInterval(() => {
     if (!isManual.value) {
       sliderMinutes.value = getCurrentMinutes()
       updateSolarMetrics(simulatedDate.value)
+      updateStars(simulatedDate.value)
     }
   }, 60000)
 })
@@ -44,6 +48,7 @@ const resetToNow = () => {
   isManual.value = false
   sliderMinutes.value = getCurrentMinutes()
   updateSolarMetrics(simulatedDate.value)
+  updateStars(simulatedDate.value)
 }
 
 const formattedTime = computed(() => {
@@ -53,40 +58,54 @@ const formattedTime = computed(() => {
 
 <template>
   <div class="p-8 flex flex-col items-center justify-center min-h-screen relative overflow-hidden transition-all duration-500">
-    <div id="solar-bg" />
+    <!-- Atmospheric Layers -->
+    <div id="solar-bg"></div>
+    
+    <!-- Real Star Map Layer -->
+    <div class="stars-container">
+      <div 
+        v-for="star in visibleStars" 
+        :key="star.name"
+        class="absolute rounded-full transition-all duration-1000"
+        :style="{
+          left: `${star.x}%`,
+          top: `${star.y}%`,
+          width: `${star.size}px`,
+          height: `${star.size}px`,
+          backgroundColor: star.color,
+          opacity: solarData.phase === 'Night' || solarData.phase === 'Astronomical Twilight' ? 1 : 0,
+          boxShadow: `0 0 ${star.size * 2}px ${star.color}`
+        }"
+        :title="star.name"
+      ></div>
+    </div>
+    
+    <div class="aurora"></div>
 
-    <UCard class="w-full max-w-md backdrop-blur-md bg-white/10 border-white/20 shadow-2xl">
+    <UCard class="w-full max-w-md backdrop-blur-md bg-white/10 border-white/20 shadow-2xl relative z-10">
       <template #header>
         <div class="flex justify-between items-start">
           <div>
-            <h1 class="text-3xl font-bold">
-              Solar Theme
-            </h1>
-            <p class="opacity-70 text-sm">
-              Drammen (59.74, 10.20)
-            </p>
+            <h1 class="text-3xl font-bold">Solar Theme</h1>
+            <p class="opacity-70 text-sm">Drammen (59.74, 10.20)</p>
           </div>
-          <UBadge
-            :color="currentTheme === 'minimal' ? 'neutral' : 'primary'"
-            variant="solid"
-          >
-            {{ solarData.phase }}
-          </UBadge>
+          <UBadge :color="currentTheme === 'minimal' ? 'gray' : 'primary'" variant="solid">{{ solarData.phase }}</UBadge>
         </div>
       </template>
 
       <div class="space-y-6">
+        
         <!-- Theme Switcher -->
         <div class="grid grid-cols-4 gap-2">
-          <UButton
-            v-for="theme in ['slate', 'sand', 'minimal', 'forest']"
+          <UButton 
+            v-for="theme in ['slate', 'sand', 'minimal', 'forest']" 
             :key="theme"
             :variant="currentTheme === theme ? 'solid' : 'ghost'"
-            color="neutral"
+            color="white"
             size="xs"
             block
+            @click="setTheme(theme)"
             class="capitalize"
-            @click="setTheme(theme as 'slate' | 'sand' | 'minimal' | 'forest')"
           >
             {{ theme }}
           </UButton>
@@ -95,56 +114,40 @@ const formattedTime = computed(() => {
         <!-- Metrics Grid -->
         <div class="grid grid-cols-2 gap-4 text-sm bg-black/5 p-4 rounded-lg">
           <div>
-            <p class="opacity-60 text-xs uppercase tracking-wider">
-              Altitude
-            </p>
-            <p class="text-xl font-mono font-bold">
-              {{ solarData.altitude.toFixed(1) }}°
-            </p>
+            <p class="opacity-60 text-xs uppercase tracking-wider">Altitude</p>
+            <p class="text-xl font-mono font-bold">{{ solarData.altitude.toFixed(1) }}°</p>
           </div>
           <div>
-            <p class="opacity-60 text-xs uppercase tracking-wider">
-              Lightness
-            </p>
-            <p class="text-xl font-mono font-bold">
-              {{ solarData.lightness.toFixed(0) }}%
-            </p>
+            <p class="opacity-60 text-xs uppercase tracking-wider">Lightness</p>
+            <p class="text-xl font-mono font-bold">{{ solarData.lightness.toFixed(0) }}%</p>
           </div>
           <div>
-            <p class="opacity-60 text-xs uppercase tracking-wider">
-              Hue
-            </p>
-            <p class="text-xl font-mono font-bold">
-              {{ solarData.hue.toFixed(0) }}°
-            </p>
+            <p class="opacity-60 text-xs uppercase tracking-wider">Hue</p>
+            <p class="text-xl font-mono font-bold">{{ solarData.hue.toFixed(0) }}°</p>
           </div>
           <div>
-            <p class="opacity-60 text-xs uppercase tracking-wider">
-              Sat
-            </p>
-            <p class="text-xl font-mono font-bold">
-              {{ solarData.saturation.toFixed(0) }}%
-            </p>
+            <p class="opacity-60 text-xs uppercase tracking-wider">Stars Vis</p>
+            <p class="text-xl font-mono font-bold">{{ visibleStars.length }}</p>
           </div>
         </div>
 
         <!-- Time Control -->
         <div class="space-y-4">
           <div class="flex justify-between items-end">
-            <span class="text-3xl font-thin font-mono">
-              {{ formattedTime }}
-            </span>
-            <span class="text-xs opacity-50 uppercase tracking-widest mb-1">
-              {{ isManual ? 'Manual Control' : 'Live Sync' }}
-            </span>
+             <span class="text-3xl font-thin font-mono">{{ formattedTime }}</span>
+             <span class="text-xs opacity-50 uppercase tracking-widest mb-1">
+               {{ isManual ? 'Manual Control' : 'Live Sync' }}
+             </span>
           </div>
-
-          <USlider
-            v-model="sliderMinutes"
-            :min="0"
-            :max="1439"
+          
+          <USlider 
+            v-model="sliderMinutes" 
+            :min="0" 
+            :max="1439" 
             :step="1"
+            :ui="{ track: { background: 'bg-current opacity-20' } }"
           />
+          
           <div class="flex justify-between text-[10px] opacity-40 font-mono uppercase">
             <span>00:00</span>
             <span>12:00</span>
@@ -152,24 +155,17 @@ const formattedTime = computed(() => {
           </div>
         </div>
 
-        <div
-          v-if="isManual"
-          class="pt-2 flex justify-center"
-        >
-          <UButton
-            variant="link"
-            color="neutral"
-            @click="resetToNow"
-          >
-            Return to Now
-          </UButton>
+        <div v-if="isManual" class="pt-2 flex justify-center">
+           <UButton variant="link" color="white" @click="resetToNow">
+             Return to Now
+           </UButton>
         </div>
       </div>
     </UCard>
 
-    <div class="mt-8 text-center text-xs opacity-40 max-w-xs leading-relaxed">
-      Merkurial Studio PoC v1.1 <br>
-      Dynamic Saturation & Golden Hour Overrides Active.
+    <div class="mt-8 text-center text-xs opacity-40 max-w-xs leading-relaxed z-10">
+      Merkurial Studio PoC v1.2 <br>
+      Real-time Star Mapping (Sidereal Calculation) Active.
     </div>
   </div>
 </template>

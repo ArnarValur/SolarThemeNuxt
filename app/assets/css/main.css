@@ -43,3 +43,35 @@ body {
     z-index: -1;
     background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.1) 100%);
 }
+
+/* --- STAR SYSTEM --- */
+:root {
+  --star-opacity: 0;
+}
+
+.stars-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  pointer-events: none;
+  opacity: var(--star-opacity);
+  transition: opacity 2s ease;
+  overflow: hidden;
+}
+
+/* Aurora Hint (Optional Decoration) */
+.aurora {
+  position: absolute;
+  top: 0; 
+  left: 0;
+  width: 100%;
+  height: 40%;
+  background: linear-gradient(180deg, rgba(0, 255, 128, 0.05) 0%, transparent 100%);
+  filter: blur(60px);
+  opacity: calc(var(--star-opacity) * 0.5);
+  transition: opacity 3s ease;
+  z-index: -2;
+}
